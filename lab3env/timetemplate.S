@@ -73,6 +73,24 @@ tick:	lw	t0, 0(a0)	# get time
 	li	t3, 0xA
 	slli	t3, t3, 0xC
 	add	t0, t0, t3	# adjust last digit
+	
+	# Now check for hour overflow (if hours == 24:00:00, reset to 00:00:00)
+	# Extract tens of hours (bits 20-23)
+	srli    t1, t0, 20
+	andi    t1, t1, 0xF
+	# Extract ones of hours (bits 16-19)
+	srli    t2, t0, 16
+	andi    t2, t2, 0xF
+	# If hours == 24, reset to 0
+	li      t3, 2
+	bne     t1, t3, tiend_hours
+	li      t3, 4
+	bne     t2, t3, tiend_hours
+	# Set hours to 00, keep minutes and seconds
+	li      t3, 0xFF0000
+	not     t3, t3
+	and     t0, t0, t3
+tiend_hours:
 tiend:	sw	t0,0(a0)	# save updated result
 	jr	ra		# return
 
@@ -116,36 +134,51 @@ time2string:
 	sw	s0, 0(sp)
 	
 	mv	s0, a0
+	# tens of hours
+	srli 	t0, a1, 20
+	andi	a0, t0, 0xF
+	jal ra, hexasc
+	sb	a0, 0(s0)
+
+	# ones of hours
+	srli 	t0, a1, 16
+	andi	a0, t0, 0xF
+	jal ra, hexasc
+	sb	a0, 1(s0)
+
+	# add colon
+	li	t0, 0x3A
+	sb	t0, 2(s0)
 
 	# tens of minutes
 	srli	t0, a1, 12
 	andi	a0, t0, 0xF
 	jal	ra, hexasc
-	sb	a0, 0(s0)
+	sb	a0, 3(s0)
 	
 	# ones of minutes
 	srli	t0, a1, 8
 	andi	a0, t0, 0xF
 	jal	ra, hexasc
-	sb	a0, 1(s0)
+	sb	a0, 4(s0)
 	
 	# add colon
 	li	t0, 0x3A
-	sb	t0, 2(s0)
+	sb	t0, 5(s0)
 	
 	# tens of seconds
 	srli	t0, a1, 4
 	andi	a0, t0, 0xF
 	jal	ra, hexasc
-	sb	a0, 3(s0)
+	sb	a0, 6(s0)
 	
 	# ones of seconds
 	andi	a0, a1, 0xF
 	jal	ra, hexasc
-	sb	a0, 4(s0)
+	sb	a0, 7(s0)
 	
 	# terminator
-	sb	zero, 5(s0)
+	sb	zero, 8(s0)
 	
 	# restore and cleanup
 	lw	s0, 0(sp)
