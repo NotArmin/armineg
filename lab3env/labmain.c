@@ -18,7 +18,7 @@ extern void tick(int*);
 extern void delay(int);
 extern int nextprime( int );
 
-int mytime = 0x225957;
+int mytime = 0x235957;
 char textstring[] = "text, more text, and even more text!";
 
 const int segment_map[10] = {
@@ -89,28 +89,37 @@ int main() {
   // Enter a forever loop
   while (1) {
     time2string( textstring, mytime ); // Converts mytime to string
+
+    set_displays(0, (int)textstring[7] - '0'); // ones of seconds
+    set_displays(1, (int)textstring[6] - '0'); // tens of seconds
+    set_displays(2, (int)textstring[4] - '0'); // ones of minutes
+    set_displays(3, (int)textstring[3] - '0'); // tens of minutes
+    set_displays(4, (int)textstring[1] - '0'); // ones of hours
+    set_displays(5, (int)textstring[0] - '0'); // tens of hours
+    
+    if (get_btn() == 1) {
+      switch (get_sw() & 0x300) 
+      {
+      case 0x300: // Switches: 11 change hour 
+        int value = get_sw() & 0x3F; // get the 6 lsb of the switches
+        mytime = (mytime & 0xFFFF) + (value * 0x10000); // bitmask + shift value
+        break;
+
+      case 0x200: // Switches: 10 change minute
+        value = get_sw() & 0x3F; // get the 6 lsb of the switches
+        mytime = (mytime & 0xFF00FF) + (value * 0x100);
+        break;
+
+      case 0x100: // Switches: 01 change second
+        value = get_sw() & 0x3F; // get the 6 lsb of the switches
+        mytime = (mytime & 0xFFFF00) + value;
+        break;
+      default:
+        break;
+      }
+    }
+
     display_string( textstring ); //Print out the string 'textstring'
-
-    set_displays(0, (int)textstring[0]); // Set display 0 to first char
-    /*
-    print( textstring ); //Print out the string 'textstring'
-    print("\n");
-    printc(textstring[0]);
-    print("\n");
-    printc(textstring[1]);
-    print("\n");
-    printc(textstring[2]);
-    print("\n");
-    printc(textstring[3]);
-    print("\n");
-    printc(textstring[4]);
-    print("\n");
-    printc(textstring[5]);
-    print("\n");
-    */
-
-
-
     delay( 1000 );          // Delays 1 sec (adjust this value)
     tick( &mytime );     // Ticks the clock once
   }
