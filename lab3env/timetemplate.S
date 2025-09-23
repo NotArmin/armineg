@@ -74,18 +74,18 @@ tick:	lw	t0, 0(a0)	# get time
 	slli	t3, t3, 0xC
 	add	t0, t0, t3	# adjust last digit
 	
-	# Now check for hour overflow (if hours == 24:00:00, reset to 00:00:00)
+	# Now check for hour overflow (if hours >= 24:00:00, reset to 00:00:00)
 	# Extract tens of hours (bits 20-23)
 	srli    t1, t0, 20
 	andi    t1, t1, 0xF
 	# Extract ones of hours (bits 16-19)
 	srli    t2, t0, 16
 	andi    t2, t2, 0xF
-	# If hours == 24, reset to 0
+	# If hours >= 24, reset to 0
 	li      t3, 2
-	bne     t1, t3, tiend_hours
+	blt     t1, t3, tiend_hours
 	li      t3, 4
-	bne     t2, t3, tiend_hours
+	blt     t2, t3, tiend_hours
 	# Set hours to 00, keep minutes and seconds
 	li      t3, 0xFF0000
 	not     t3, t3

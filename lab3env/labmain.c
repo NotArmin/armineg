@@ -97,27 +97,27 @@ int main() {
     set_displays(4, (int)textstring[1] - '0'); // ones of hours
     set_displays(5, (int)textstring[0] - '0'); // tens of hours
     
-    if (get_btn() == 1) {
+    if (get_btn() == 1) { // Works for good values, breaks for non-clock inputs
+      int value = get_sw() & 0x3F; // get the 6 lsb of the switches
       switch (get_sw() & 0x300) 
       {
       case 0x300: // Switches: 11 change hour 
-        int value = get_sw() & 0x3F; // get the 6 lsb of the switches
-        mytime = (mytime & 0xFFFF) + (value * 0x10000); // bitmask + shift value
+      // bitmask + shift value
+        mytime = (mytime & 0x00FFFF) | ((value / 10) << 20) | ((value % 10) << 16);
         break;
 
       case 0x200: // Switches: 10 change minute
-        value = get_sw() & 0x3F; // get the 6 lsb of the switches
-        mytime = (mytime & 0xFF00FF) + (value * 0x100);
+        mytime = (mytime & 0xFF00FF) | ((value / 10) << 12) | ((value % 10) << 8);
         break;
 
       case 0x100: // Switches: 01 change second
-        value = get_sw() & 0x3F; // get the 6 lsb of the switches
-        mytime = (mytime & 0xFFFF00) + value;
+        mytime = (mytime & 0xFFFF00) | ((value / 10) << 4) | (value % 10);
         break;
       default:
         break;
       }
     }
+
 
     display_string( textstring ); //Print out the string 'textstring'
     delay( 1000 );          // Delays 1 sec (adjust this value)
