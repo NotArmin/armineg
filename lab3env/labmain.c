@@ -20,6 +20,7 @@ extern int nextprime( int );
 
 int mytime = 0x235957;
 char textstring[] = "text, more text, and even more text!";
+volatile unsigned short *TMR1_STATUS = (unsigned short*) 0x04000020;
 
 const int segment_map[10] = {
   0x3F, // 0 00111111
@@ -78,10 +79,95 @@ void handle_interrupt(unsigned cause)
 
 /* Add your code here for initializing interrupts. */
 void labinit(void)
-{}
+{
+  //initialize control register
+  volatile unsigned short *TMR1_CONTROL = (unsigned short*) 0x04000024;
+
+  // intitialize the time period to be 100 ms 
+  // that gives us a period of 1/1000
+  volatile unsigned short *TMR1_PERLO = (unsigned short*)  0x04000028;
+  volatile unsigned short *TMR1_PERHI = (unsigned short*)  0x0400002c;
+
+
+  // 10 timeout per sec
+  // clock rate of 30 000 000 clock cycles per second means 30 MHz
+  // but we want 10 Hz
+
+  unsigned int period = (300000000/10) - 1; // we do minus 1 bcz the timers actual period is one cycle greater than that store in the registers, assumes we start from 0..., not 1...
+
+  *(TMR1_PERLO) = period & 0xFFFF;
+  *(TMR1_PERHI) = period >> 16;
+  
+  
+  /*
+    set control bits to do the following:
+    - Start timer (bit 0 = 1)
+    - Be continuous. allows timer to reload automatically after reach zero
+    - Enable ITO (bit 2 = 1), this enables timeout flags which we want!   
+  */
+  *TMR1_CONTROL = 0x7;
+
+
+}
 
 /* Your code goes into main as well as any needed functions. */
+// FOR ASSIGNMENT 2
 int main() {
+  // Call labinit()
+  labinit();
+
+  
+  // Enter a forever loop
+  while (1) {
+    int btn = get_btn;
+    int sw = get_sw;
+
+    
+    if(*TMR1_STATUS & 0x1){
+      *TMR1_STATUS = 0x1;
+      time2string( textstring, mytime ); // Converts mytime to string
+
+      set_displays(0, (int)textstring[7] - '0'); // ones of seconds
+      set_displays(1, (int)textstring[6] - '0'); // tens of seconds
+      set_displays(2, (int)textstring[4] - '0'); // ones of minutes
+      set_displays(3, (int)textstring[3] - '0'); // tens of minutes
+      set_displays(4, (int)textstring[1] - '0'); // ones of hours
+      set_displays(5, (int)textstring[0] - '0'); // tens of hours
+
+      if (btn == 1) { // Works for good values, breaks for non-clock inputs
+        int value = sw & 0x3F; // get the 6 lsb of the switches
+        switch (sw & 0x300) 
+        {
+          case 0x300: // Switches: 11 change hour 
+          // bitmask + shift value
+            mytime = (mytime & 0x00FFFF) | ((value / 10) << 20) | ((value % 10) << 16);
+            break;
+
+          case 0x200: // Switches: 10 change minute
+            mytime = (mytime & 0xFF00FF) | ((value / 10) << 12) | ((value % 10) << 8);
+            break;
+
+          case 0x100: // Switches: 01 change second
+            mytime = (mytime & 0xFFFF00) | ((value / 10) << 4) | (value % 10);
+            break;
+          default:
+            break;
+        }
+      }
+
+
+      display_string( textstring ); //Print out the string 'textstring'
+        
+      tick( &mytime );     // Ticks the clock once
+    }
+
+  }
+    
+}
+
+
+//FOR ASSIGNMENT 1
+/*int main() {
   // Call labinit()
   labinit();
 
@@ -120,9 +206,9 @@ int main() {
 
 
     display_string( textstring ); //Print out the string 'textstring'
-    delay( 1000 );          // Delays 1 sec (adjust this value)
+    delay( 1000 );           Delays 1 sec (adjust this value)
     tick( &mytime );     // Ticks the clock once
   }
-}
+}*/
 
 
