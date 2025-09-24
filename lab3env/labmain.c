@@ -14,6 +14,7 @@ extern void print_dec(unsigned int);
 extern void print_hex32(unsigned int x);
 extern void display_string(char*);
 extern void time2string(char*,int);
+extern void enable_interrupt();
 extern void tick(int*);
 extern void delay(int);
 extern int nextprime( int );
@@ -21,6 +22,7 @@ extern int nextprime( int );
 int mytime = 0x235957;
 char textstring[] = "text, more text, and even more text!";
 int timecount = 0;
+int prime = 1234567;
 
 const int segment_map[10] = {
   0x3F, // 0 00111111
@@ -75,7 +77,28 @@ int get_btn (void) {
 
 /* Below is the function that will be called when an interrupt is triggered. */
 void handle_interrupt(unsigned cause) 
-{}
+{
+  volatile unsigned short *TMR1_STATUS = (unsigned short*) 0x04000020;
+
+  if(*TMR1_STATUS & 0x1){
+    *TMR1_STATUS = 0x0;
+    time2string( textstring, mytime ); // Converts mytime to string
+
+    set_displays(0, (int)textstring[7] - '0'); // ones of seconds
+    set_displays(1, (int)textstring[6] - '0'); // tens of seconds
+    set_displays(2, (int)textstring[4] - '0'); // ones of minutes
+    set_displays(3, (int)textstring[3] - '0'); // tens of minutes
+    set_displays(4, (int)textstring[1] - '0'); // ones of hours
+    set_displays(5, (int)textstring[0] - '0'); // tens of hours
+
+    display_string( textstring ); //Print out the string 'textstring'
+    timecount++;
+    if (timecount >= 10){
+        tick( &mytime );     // Ticks the clock once
+        timecount = 0;
+      }
+  }
+}
 
 /* Add your code here for initializing interrupts. */
 void labinit(void)
@@ -108,10 +131,26 @@ void labinit(void)
   *TMR1_CONTROL = 0x7;
   // *TMR1_CONTROL = 0x5; without continuous
 
+  enable_interrupt();
+
 }
 
 /* Your code goes into main as well as any needed functions. */
-
+// FOR ASSIGNMENT 3
+int main() {
+  // Call labinit()
+  labinit();
+  
+  // Enter a forever loop
+  while (1) {
+    print("prime:");
+    prime = nextprime (prime);
+    print_dec(prime);
+    print("\n");
+  }
+  
+    
+}
 
 
 // FOR ASSIGNMENT 2
