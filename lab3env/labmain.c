@@ -20,7 +20,7 @@ extern int nextprime( int );
 
 int mytime = 0x235957;
 char textstring[] = "text, more text, and even more text!";
-volatile unsigned short *TMR1_STATUS = (unsigned short*) 0x04000020;
+int timecount = 0;
 
 const int segment_map[10] = {
   0x3F, // 0 00111111
@@ -93,10 +93,10 @@ void labinit(void)
   // clock rate of 30 000 000 clock cycles per second means 30 MHz
   // but we want 10 Hz
 
-  unsigned int period = (300000000/10) - 1; // we do minus 1 bcz the timers actual period is one cycle greater than that store in the registers, assumes we start from 0..., not 1...
+  unsigned int period = (30000000/10) - 1; // we do minus 1 bcz the timers actual period is one cycle greater than that store in the registers, assumes we start from 0..., not 1...
 
   *(TMR1_PERLO) = period & 0xFFFF;
-  *(TMR1_PERHI) = period >> 16;
+  *(TMR1_PERHI) = period >> 16;                          
   
   
   /*
@@ -106,25 +106,31 @@ void labinit(void)
     - Enable ITO (bit 2 = 1), this enables timeout flags which we want!   
   */
   *TMR1_CONTROL = 0x7;
-
+  // *TMR1_CONTROL = 0x5; without continuous
 
 }
 
 /* Your code goes into main as well as any needed functions. */
+
+
+
 // FOR ASSIGNMENT 2
-int main() {
+/*int main() {
   // Call labinit()
+  volatile unsigned short *TMR1_STATUS = (unsigned short*) 0x04000020;
+
   labinit();
 
   
   // Enter a forever loop
   while (1) {
-    int btn = get_btn;
-    int sw = get_sw;
+    int btn = get_btn();
+    int sw = get_sw();
 
     
     if(*TMR1_STATUS & 0x1){
-      *TMR1_STATUS = 0x1;
+      *TMR1_STATUS = 0x0;
+      
       time2string( textstring, mytime ); // Converts mytime to string
 
       set_displays(0, (int)textstring[7] - '0'); // ones of seconds
@@ -154,16 +160,21 @@ int main() {
             break;
         }
       }
-
-
+      timecount++;
       display_string( textstring ); //Print out the string 'textstring'
-        
-      tick( &mytime );     // Ticks the clock once
+
+      if (timecount >= 10){
+        tick( &mytime );     // Ticks the clock once
+        timecount = 0;
+      }
+      
     }
+    
 
   }
+  
     
-}
+}*/
 
 
 //FOR ASSIGNMENT 1
@@ -190,7 +201,7 @@ int main() {
       case 0x300: // Switches: 11 change hour 
       // bitmask + shift value
         mytime = (mytime & 0x00FFFF) | ((value / 10) << 20) | ((value % 10) << 16);
-        break;
+        break;tick( &mytime );     // Ticks the clock once
 
       case 0x200: // Switches: 10 change minute
         mytime = (mytime & 0xFF00FF) | ((value / 10) << 12) | ((value % 10) << 8);
